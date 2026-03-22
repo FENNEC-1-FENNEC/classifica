@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { db } from "./firebase";
 import { ref, onValue, set, remove, update } from "firebase/database";
 
-const ADMIN_PASSWORD = "grest2026";
+const ADMIN_PASSWORD = "Grest@2026#Admin!";
+const SEMI_PASSWORD  = "Punti@Grest#26";
 
 const initialTeams = [
   { id: "1", name: "Squadra Sole", points: 0, color: "#F5C500", icon: "☀️", img: null },
@@ -108,7 +109,11 @@ export default function App() {
   const [hidePoints, setHidePoints] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const [isAdmin, setIsAdmin] = useState(false);
+  // role: null | "admin" | "semi"
+  const [role, setRole] = useState(null);
+  const isAdmin = role === "admin";
+  const isSemi  = role === "semi" || role === "admin";
+
   const [showLogin, setShowLogin] = useState(false);
   const [password, setPassword] = useState("");
   const [wrongPw, setWrongPw] = useState(false);
@@ -137,27 +142,18 @@ export default function App() {
   const newHistLogoRef = useRef();
   const editHistLogoRef = useRef();
 
-  // ── Leggi dati da Firebase in tempo reale ──
   useEffect(() => {
     let loaded = 0;
     const done = () => { loaded++; if (loaded >= 3) setLoading(false); };
 
-    // Teams
     const teamsRef = ref(db, "teams");
     const unsubTeams = onValue(teamsRef, (snap) => {
       const data = snap.val();
-      if (data) {
-        setTeams(Object.values(data));
-      } else {
-        // Prima volta: scrivi i dati iniziali
-        const obj = {};
-        initialTeams.forEach(t => { obj[t.id] = t; });
-        set(teamsRef, obj);
-      }
+      if (data) { setTeams(Object.values(data)); }
+      else { const obj = {}; initialTeams.forEach(t => { obj[t.id] = t; }); set(teamsRef, obj); }
       done();
     });
 
-    // History
     const histRef = ref(db, "history");
     const unsubHist = onValue(histRef, (snap) => {
       const data = snap.val();
@@ -165,7 +161,6 @@ export default function App() {
       done();
     });
 
-    // Settings
     const settRef = ref(db, "settings");
     const unsubSett = onValue(settRef, (snap) => {
       const data = snap.val();
@@ -180,7 +175,6 @@ export default function App() {
     return () => { unsubTeams(); unsubHist(); unsubSett(); };
   }, []);
 
-  // ── Helpers Firebase ──
   const fbSetTeam = (team) => set(ref(db, `teams/${team.id}`), team);
   const fbDeleteTeam = (id) => remove(ref(db, `teams/${id}`));
   const fbSetHistory = (entry) => set(ref(db, `history/${entry.id}`), entry);
@@ -197,46 +191,48 @@ export default function App() {
   const flash = (id) => { setAnimId(id); setTimeout(() => setAnimId(null), 500); };
 
   const addPts = (id, val) => {
-    const n = parseInt(val);
-    if (isNaN(n) || n <= 0) return;
-    const team = teams.find(t => t.id === id);
-    if (!team) return;
-    fbSetTeam({ ...team, points: team.points + n });
-    flash(id);
+    const n = parseInt(val); if (isNaN(n) || n <= 0) return;
+    const team = teams.find(t => t.id === id); if (!team) return;
+    fbSetTeam({ ...team, points: team.points + n }); flash(id);
   };
-
   const subPts = (id, val) => {
-    const n = parseInt(val);
-    if (isNaN(n) || n <= 0) return;
-    const team = teams.find(t => t.id === id);
-    if (!team) return;
-    fbSetTeam({ ...team, points: Math.max(0, team.points - n) });
-    flash(id);
+    const n = parseInt(val); if (isNaN(n) || n <= 0) return;
+    const team = teams.find(t => t.id === id); if (!team) return;
+    fbSetTeam({ ...team, points: Math.max(0, team.points - n) }); flash(id);
   };
-
   const setPts = (id) => {
-    const n = parseInt(pointInput[id]);
-    if (isNaN(n) || n < 0) return;
-    const team = teams.find(t => t.id === id);
-    if (!team) return;
+    const n = parseInt(pointInput[id]); if (isNaN(n) || n < 0) return;
+    const team = teams.find(t => t.id === id); if (!team) return;
     fbSetTeam({ ...team, points: n });
-    setPointInput(p => ({ ...p, [id]: "" }));
-    flash(id);
+    setPointInput(p => ({ ...p, [id]: "" })); flash(id);
   };
 
   const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) { setIsAdmin(true); setShowLogin(false); setPassword(""); setWrongPw(false); }
+    if (password === ADMIN_PASSWORD) { setRole("admin"); setShowLogin(false); setPassword(""); setWrongPw(false); }
+    else if (password === SEMI_PASSWORD) { setRole("semi"); setShowLogin(false); setPassword(""); setWrongPw(false); }
     else setWrongPw(true);
   };
 
   const TeamIcon = ({ team, size = 52, emojiSize = 28 }) => (
     <div className="team-icon" style={{ width: size, height: size, fontSize: emojiSize }}>
-      {team.img
-        ? <img src={team.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        : <span>{team.icon || "⭐"}</span>
-      }
+      {team.img ? <img src={team.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{team.icon || "⭐"}</span>}
     </div>
   );
+
+  // Badge colorato per il ruolo
+  const RoleBadge = () => {
+    if (!role) return null;
+    return (
+      <span style={{
+        background: isAdmin ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.18)",
+        color: "white", padding: "4px 14px", borderRadius: 999,
+        fontFamily: "'Fredoka One',cursive", fontSize: 13,
+        border: isAdmin ? "none" : "1px solid rgba(255,255,255,0.35)"
+      }}>
+        {isAdmin ? "✅ Admin" : "⚡ Animatore"}
+      </span>
+    );
+  };
 
   if (loading) return (
     <div className="loading">
@@ -269,8 +265,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 8, justifyContent: "center", alignItems: "center", marginTop: 6 }}>
             <input type="text" value={yearTmp} onChange={e => setYearTmp(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") { fbSetting("grestYear", yearTmp); setEditingYear(false); } }}
-              style={{ width: 120, textAlign: "center", fontSize: 18, fontFamily: "'Fredoka One',cursive", background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.5)", color: "white", borderRadius: 10, padding: "4px 10px" }}
-              autoFocus />
+              style={{ width: 120, textAlign: "center", fontSize: 18, fontFamily: "'Fredoka One',cursive", background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.5)", color: "white", borderRadius: 10, padding: "4px 10px" }} autoFocus />
             <button onClick={() => { fbSetting("grestYear", yearTmp); setEditingYear(false); }} className="btn" style={{ background: "rgba(255,255,255,0.3)", color: "white", fontSize: 13, padding: "5px 10px" }}>✓</button>
             <button onClick={() => setEditingYear(false)} className="btn" style={{ background: "rgba(0,0,0,0.2)", color: "white", fontSize: 13, padding: "5px 10px" }}>✕</button>
           </div>
@@ -283,17 +278,17 @@ export default function App() {
         <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 3, fontStyle: "italic" }}>Guardate a lui e sarete raggianti — Sal 34</div>
 
         <div style={{ marginTop: 14 }}>
-          {!isAdmin ? (
+          {!role ? (
             <button onClick={() => setShowLogin(true)} className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.35)", fontSize: 13 }}>🔒 Accesso Animatori</button>
           ) : (
             <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-              <span style={{ background: "rgba(255,255,255,0.25)", color: "white", padding: "4px 14px", borderRadius: 999, fontFamily: "'Fredoka One',cursive", fontSize: 13 }}>✅ Admin</span>
-              <button onClick={() => setShowAddTeam(s => !s)} className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.3)", fontSize: 13 }}>➕ Squadra</button>
-              <button onClick={() => { const v = !hidePoints; fbSetting("hidePoints", v); }} className="btn" style={{ background: hidePoints ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.3)", fontSize: 13 }}>
+              <RoleBadge />
+              {isAdmin && <button onClick={() => setShowAddTeam(s => !s)} className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.3)", fontSize: 13 }}>➕ Squadra</button>}
+              {isAdmin && <button onClick={() => { const v = !hidePoints; fbSetting("hidePoints", v); }} className="btn" style={{ background: hidePoints ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.3)", fontSize: 13 }}>
                 {hidePoints ? "👁️ Mostra punti" : "🙈 Nascondi punti"}
-              </button>
-              <button onClick={() => setConfirmDelete({ type: "reset" })} className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.3)", fontSize: 13 }}>🔄 Reset</button>
-              <button onClick={() => setIsAdmin(false)} className="btn" style={{ background: "rgba(255,255,255,0.13)", color: "white", border: "2px solid rgba(255,255,255,0.25)", fontSize: 13 }}>🚪 Esci</button>
+              </button>}
+              {isAdmin && <button onClick={() => setConfirmDelete({ type: "reset" })} className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.3)", fontSize: 13 }}>🔄 Reset</button>}
+              <button onClick={() => setRole(null)} className="btn" style={{ background: "rgba(255,255,255,0.13)", color: "white", border: "2px solid rgba(255,255,255,0.25)", fontSize: 13 }}>🚪 Esci</button>
             </div>
           )}
         </div>
@@ -340,7 +335,8 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
           <div className="fade-in" style={{ background: "white", borderRadius: 24, padding: 32, width: "100%", maxWidth: 340, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
             <div style={{ textAlign: "center", fontSize: 40, marginBottom: 8 }}>🔐</div>
-            <h3 style={{ fontFamily: "'Fredoka One',cursive", fontSize: 22, color: "#333", textAlign: "center", marginBottom: 18 }}>Accesso Animatori</h3>
+            <h3 style={{ fontFamily: "'Fredoka One',cursive", fontSize: 22, color: "#333", textAlign: "center", marginBottom: 6 }}>Accesso Animatori</h3>
+            <p style={{ textAlign: "center", fontSize: 12, color: "#aaa", marginBottom: 16 }}>Admin completo o animatore con accesso punti</p>
             <input type="password" placeholder="Password" value={password}
               onChange={e => { setPassword(e.target.value); setWrongPw(false); }}
               onKeyDown={e => e.key === "Enter" && handleLogin()}
@@ -385,8 +381,7 @@ export default function App() {
               </div>
             )}
 
-            {/* Banner punti nascosti */}
-            {hidePoints && !isAdmin && (
+            {hidePoints && !role && (
               <div className="fade-in" style={{ background: "linear-gradient(135deg,#F5C500,#F4631E)", borderRadius: 14, padding: "12px 18px", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 24 }}>🙈</span>
                 <div>
@@ -419,10 +414,8 @@ export default function App() {
                           onChange={async (e) => { const f = e.target.files[0]; if (f) { const d = await readFile(f); setEditTmp(p => ({ ...p, img: d })); } e.target.value = ""; }} />
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => {
-                          fbSetTeam({ ...team, name: editTmp.name, icon: editTmp.icon, color: editTmp.color, img: editTmp.img });
-                          setEditingTeam(null);
-                        }} className="btn" style={{ flex: 1, background: "#2ecc71", color: "white", padding: 9 }}>✓ Salva</button>
+                        <button onClick={() => { fbSetTeam({ ...team, name: editTmp.name, icon: editTmp.icon, color: editTmp.color, img: editTmp.img }); setEditingTeam(null); }}
+                          className="btn" style={{ flex: 1, background: "#2ecc71", color: "white", padding: 9 }}>✓ Salva</button>
                         <button onClick={() => setEditingTeam(null)} className="btn" style={{ flex: 1, background: "#f0ece6", color: "#666", padding: 9 }}>✕ Annulla</button>
                       </div>
                     </div>
@@ -436,19 +429,20 @@ export default function App() {
                         <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 16, color: team.color, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{team.name}</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
                           <div className="progress-track">
-                            <div className="progress-fill" style={{ width: hidePoints && !isAdmin ? "50%" : `${Math.max(4, (team.points / maxPts) * 100)}%`, background: `linear-gradient(90deg,${team.color}77,${team.color})`, filter: hidePoints && !isAdmin ? "blur(4px)" : "none" }} />
+                            <div className="progress-fill" style={{ width: hidePoints && !role ? "50%" : `${Math.max(4, (team.points / maxPts) * 100)}%`, background: `linear-gradient(90deg,${team.color}77,${team.color})`, filter: hidePoints && !role ? "blur(4px)" : "none" }} />
                           </div>
                         </div>
                       </div>
                       <div style={{ textAlign: "right", minWidth: 52 }}>
-                        {hidePoints && !isAdmin
+                        {hidePoints && !role
                           ? <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 28, color: team.color, lineHeight: 1, filter: "blur(6px)", userSelect: "none" }}>000</div>
                           : <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 28, color: team.color, lineHeight: 1 }}>{team.points}</div>
                         }
                         <div style={{ fontSize: 10, color: "#bbb", fontWeight: 700 }}>PUNTI</div>
                       </div>
 
-                      {isAdmin && (
+                      {/* Controlli punti: visibili a semi e admin */}
+                      {isSemi && (
                         <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 150 }}>
                           <div style={{ display: "flex", gap: 5 }}>
                             <input type="number" min="0" placeholder="+pts" value={addInput[team.id] ?? ""}
@@ -473,12 +467,15 @@ export default function App() {
                               style={{ width: 68 }} />
                             <button onClick={() => setPts(team.id)} className="btn" style={{ background: "#F5C500", color: "#333", fontSize: 12, padding: "5px 8px" }}>Set</button>
                           </div>
-                          <div style={{ display: "flex", gap: 5 }}>
-                            <button onClick={() => { setEditingTeam(team.id); setEditTmp({ name: team.name, icon: team.icon || "⭐", color: team.color, img: team.img || null }); }}
-                              className="btn" style={{ background: "#f0ece6", color: "#555", flex: 1, fontSize: 13 }}>✏️</button>
-                            <button onClick={() => setConfirmDelete({ type: "team", id: team.id })}
-                              className="btn" style={{ background: "#fde8ec", color: "#E8295B", flex: 1, fontSize: 13 }}>🗑</button>
-                          </div>
+                          {/* Modifica/elimina solo admin */}
+                          {isAdmin && (
+                            <div style={{ display: "flex", gap: 5 }}>
+                              <button onClick={() => { setEditingTeam(team.id); setEditTmp({ name: team.name, icon: team.icon || "⭐", color: team.color, img: team.img || null }); }}
+                                className="btn" style={{ background: "#f0ece6", color: "#555", flex: 1, fontSize: 13 }}>✏️</button>
+                              <button onClick={() => setConfirmDelete({ type: "team", id: team.id })}
+                                className="btn" style={{ background: "#fde8ec", color: "#E8295B", flex: 1, fontSize: 13 }}>🗑</button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </>
