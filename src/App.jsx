@@ -141,9 +141,6 @@ export default function App() {
   const editTeamImgRef = useRef();
   const newHistLogoRef = useRef();
   const editHistLogoRef = useRef();
-  const prevHidePoints = useRef(false);
-  const [frozenOrder, setFrozenOrder] = useState([]);
-
   useEffect(() => {
     let loaded = 0;
     const done = () => { loaded++; if (loaded >= 4) setLoading(false); };
@@ -191,17 +188,28 @@ export default function App() {
   const fbDeleteHistory = (id) => remove(ref(db, `history/${id}`));
   const fbSetting = (key, val) => update(ref(db, "settings"), { [key]: val });
 
-  // Quando hidePoints è attivo, congela l'ordine della classifica
+  // Quando admin nasconde i punti, salva l'ordine congelato su Firebase
   const [frozenOrder, setFrozenOrder] = useState([]);
-  const prevHidePoints = useRef(false);
 
   useEffect(() => {
-    if (hidePoints && !prevHidePoints.current) {
-      // Nascondo i punti: congela l'ordine attuale
-      setFrozenOrder([...teams].sort((a, b) => b.points - a.points).map(t => t.id));
+    const fo = ref(db, "settings/frozenOrder");
+    const unsub = onValue(fo, (snap) => {
+      const data = snap.val();
+      if (data) setFrozenOrder(data);
+    });
+    return () => unsub();
+  }, []);
+
+  const toggleHidePoints = () => {
+    const newVal = !hidePoints;
+    if (newVal) {
+      // Congela l'ordine attuale su Firebase
+      const order = [...teams].sort((a, b) => b.points - a.points).map(t => t.id);
+      update(ref(db, "settings"), { hidePoints: newVal, frozenOrder: order });
+    } else {
+      update(ref(db, "settings"), { hidePoints: newVal });
     }
-    prevHidePoints.current = hidePoints;
-  }, [hidePoints, teams]);
+  };
 
   const sorted = hidePoints && !role && frozenOrder.length > 0
     ? frozenOrder.map(id => teams.find(t => t.id === id)).filter(Boolean)
@@ -308,7 +316,7 @@ export default function App() {
             <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
               <RoleBadge />
               {isAdmin && <button onClick={() => setShowAddTeam(s => !s)} className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.3)", fontSize: 13 }}>➕ Squadra</button>}
-              {isAdmin && <button onClick={() => { const v = !hidePoints; fbSetting("hidePoints", v); }} className="btn" style={{ background: hidePoints ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.3)", fontSize: 13 }}>
+              {isAdmin && <button onClick={toggleHidePoints} className="btn" style={{ background: hidePoints ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.3)", fontSize: 13 }}>
                 {hidePoints ? "👁️ Mostra punti" : "🙈 Nascondi punti"}
               </button>}
               {isAdmin && <button onClick={() => setConfirmDelete({ type: "reset" })} className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.3)", fontSize: 13 }}>🔄 Reset</button>}
