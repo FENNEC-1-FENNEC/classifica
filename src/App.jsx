@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { db } from "./firebase";
 import { ref, onValue, set, remove, update } from "firebase/database";
 
-const ADMIN_PASSWORD = "Grest@2026#Admin!";
-const SEMI_PASSWORD  = "Punti@Grest#26";
+// Password caricate da Firebase — non visibili nel codice
 
 const initialTeams = [
   { id: "1", name: "Squadra Sole", points: 0, color: "#F5C500", icon: "☀️", img: null },
@@ -108,6 +107,7 @@ export default function App() {
   const [grestYear, setGrestYear] = useState("2026");
   const [hidePoints, setHidePoints] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [passwords, setPasswords] = useState({ admin: null, semi: null });
 
   // role: null | "admin" | "semi"
   const [role, setRole] = useState(null);
@@ -144,7 +144,7 @@ export default function App() {
 
   useEffect(() => {
     let loaded = 0;
-    const done = () => { loaded++; if (loaded >= 3) setLoading(false); };
+    const done = () => { loaded++; if (loaded >= 4) setLoading(false); };
 
     const teamsRef = ref(db, "teams");
     const unsubTeams = onValue(teamsRef, (snap) => {
@@ -172,7 +172,16 @@ export default function App() {
       done();
     });
 
-    return () => { unsubTeams(); unsubHist(); unsubSett(); };
+// Carica password da Firebase
+    const pwRef = ref(db, "passwords");
+    const unsubPw = onValue(pwRef, (snap) => {
+      const data = snap.val();
+      console.log("Firebase passwords:", data);
+      if (data) setPasswords({ admin: data.admin, semi: data.semi });
+      done();
+    });
+
+    return () => { unsubTeams(); unsubHist(); unsubSett(); unsubPw(); };
   }, []);
 
   const fbSetTeam = (team) => set(ref(db, `teams/${team.id}`), team);
@@ -208,8 +217,8 @@ export default function App() {
   };
 
   const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) { setRole("admin"); setShowLogin(false); setPassword(""); setWrongPw(false); }
-    else if (password === SEMI_PASSWORD) { setRole("semi"); setShowLogin(false); setPassword(""); setWrongPw(false); }
+    if (password === passwords.admin) { setRole("admin"); setShowLogin(false); setPassword(""); setWrongPw(false); }
+    else if (password === passwords.semi) { setRole("semi"); setShowLogin(false); setPassword(""); setWrongPw(false); }
     else setWrongPw(true);
   };
 
