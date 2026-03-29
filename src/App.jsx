@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { db } from "./firebase";
 import { ref, onValue, set, remove, update } from "firebase/database";
- 
+
 // Password caricate da Firebase — non visibili nel codice
- 
+
 const initialTeams = [
   { id: "1", name: "Squadra Sole", points: 0, color: "#F5C500", icon: "☀️", img: null },
   { id: "2", name: "Squadra Cielo", points: 0, color: "#29B8D8", icon: "🐦", img: null },
   { id: "3", name: "Squadra Fuoco", points: 0, color: "#F4631E", icon: "🔥", img: null },
   { id: "4", name: "Squadra Rosa", points: 0, color: "#E8295B", icon: "🌸", img: null },
 ];
- 
+
 const styleEl = document.createElement("style");
 styleEl.textContent = `
   @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;900&display=swap');
@@ -91,7 +91,7 @@ styleEl.textContent = `
   ::-webkit-scrollbar-thumb { background: #F5C500; border-radius: 99px; }
 `;
 document.head.appendChild(styleEl);
- 
+
 function readFile(file) {
   return new Promise((res) => {
     const r = new FileReader();
@@ -99,7 +99,7 @@ function readFile(file) {
     r.readAsDataURL(file);
   });
 }
- 
+
 export default function App() {
   const [teams, setTeams] = useState([]);
   const [history, setHistory] = useState([]);
@@ -108,19 +108,19 @@ export default function App() {
   const [hidePoints, setHidePoints] = useState(false);
   const [loading, setLoading] = useState(true);
   const [passwords, setPasswords] = useState({ admin: null, semi: null });
- 
+
   // role: null | "admin" | "semi"
   const [role, setRole] = useState(null);
   const isAdmin = role === "admin";
   const isSemi  = role === "semi" || role === "admin";
- 
+
   const [showLogin, setShowLogin] = useState(false);
   const [password, setPassword] = useState("");
   const [wrongPw, setWrongPw] = useState(false);
   const [tab, setTab] = useState("classifica");
   const [editingYear, setEditingYear] = useState(false);
   const [yearTmp, setYearTmp] = useState("");
- 
+
   const [editingTeam, setEditingTeam] = useState(null);
   const [editTmp, setEditTmp] = useState({});
   const [pointInput, setPointInput] = useState({});
@@ -130,23 +130,24 @@ export default function App() {
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [newTeam, setNewTeam] = useState({ name: "", icon: "⭐", color: "#8e44ad", img: null });
   const [confirmDelete, setConfirmDelete] = useState(null);
- 
+
   const [editingHistory, setEditingHistory] = useState(null);
   const [editHistTmp, setEditHistTmp] = useState({});
   const [showAddHistory, setShowAddHistory] = useState(false);
   const [newHist, setNewHist] = useState({ year: "", winner: "", theme: "", notes: "", logo: null });
- 
+
   const logoRef = useRef();
   const newTeamImgRef = useRef();
   const editTeamImgRef = useRef();
   const newHistLogoRef = useRef();
   const editHistLogoRef = useRef();
   const prevHidePoints = useRef(false);
-  
+  const [frozenOrder, setFrozenOrder] = useState([]);
+
   useEffect(() => {
     let loaded = 0;
     const done = () => { loaded++; if (loaded >= 4) setLoading(false); };
- 
+
     const teamsRef = ref(db, "teams");
     const unsubTeams = onValue(teamsRef, (snap) => {
       const data = snap.val();
@@ -154,14 +155,14 @@ export default function App() {
       else { const obj = {}; initialTeams.forEach(t => { obj[t.id] = t; }); set(teamsRef, obj); }
       done();
     });
- 
+
     const histRef = ref(db, "history");
     const unsubHist = onValue(histRef, (snap) => {
       const data = snap.val();
       setHistory(data ? Object.values(data) : []);
       done();
     });
- 
+
     const settRef = ref(db, "settings");
     const unsubSett = onValue(settRef, (snap) => {
       const data = snap.val();
@@ -172,7 +173,7 @@ export default function App() {
       }
       done();
     });
- 
+
     // Carica password da Firebase
     const pwRef = ref(db, "passwords");
     const unsubPw = onValue(pwRef, (snap) => {
@@ -180,20 +181,20 @@ export default function App() {
       if (data) setPasswords({ admin: data.admin, semi: data.semi });
       done();
     });
- 
+
     return () => { unsubTeams(); unsubHist(); unsubSett(); unsubPw(); };
   }, []);
- 
+
   const fbSetTeam = (team) => set(ref(db, `teams/${team.id}`), team);
   const fbDeleteTeam = (id) => remove(ref(db, `teams/${id}`));
   const fbSetHistory = (entry) => set(ref(db, `history/${entry.id}`), entry);
   const fbDeleteHistory = (id) => remove(ref(db, `history/${id}`));
   const fbSetting = (key, val) => update(ref(db, "settings"), { [key]: val });
- 
+
   // Quando hidePoints è attivo, congela l'ordine della classifica
   const [frozenOrder, setFrozenOrder] = useState([]);
   const prevHidePoints = useRef(false);
- 
+
   useEffect(() => {
     if (hidePoints && !prevHidePoints.current) {
       // Nascondo i punti: congela l'ordine attuale
@@ -201,7 +202,7 @@ export default function App() {
     }
     prevHidePoints.current = hidePoints;
   }, [hidePoints, teams]);
- 
+
   const sorted = hidePoints && !role && frozenOrder.length > 0
     ? frozenOrder.map(id => teams.find(t => t.id === id)).filter(Boolean)
     : [...teams].sort((a, b) => b.points - a.points);
@@ -210,9 +211,9 @@ export default function App() {
   const medals = ["🥇", "🥈", "🥉"];
   const rankBorder = ["#F5C500", "#C0C0C0", "#F4631E"];
   const rankBg = ["#FFFBEA", "#F8F8F8", "#FFF5EE"];
- 
+
   const flash = (id) => { setAnimId(id); setTimeout(() => setAnimId(null), 500); };
- 
+
   const addPts = (id, val) => {
     const n = parseInt(val); if (isNaN(n) || n <= 0) return;
     const team = teams.find(t => t.id === id); if (!team) return;
@@ -229,19 +230,19 @@ export default function App() {
     fbSetTeam({ ...team, points: n });
     setPointInput(p => ({ ...p, [id]: "" })); flash(id);
   };
- 
+
   const handleLogin = () => {
     if (password === passwords.admin) { setRole("admin"); setShowLogin(false); setPassword(""); setWrongPw(false); }
     else if (password === passwords.semi) { setRole("semi"); setShowLogin(false); setPassword(""); setWrongPw(false); }
     else setWrongPw(true);
   };
- 
+
   const TeamIcon = ({ team, size = 52, emojiSize = 28 }) => (
     <div className="team-icon" style={{ width: size, height: size, fontSize: emojiSize }}>
       {team.img ? <img src={team.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{team.icon || "⭐"}</span>}
     </div>
   );
- 
+
   // Badge colorato per il ruolo
   const RoleBadge = () => {
     if (!role) return null;
@@ -256,34 +257,34 @@ export default function App() {
       </span>
     );
   };
- 
+
   if (loading) return (
     <div className="loading">
       <div className="spinner" />
       Caricamento...
     </div>
   );
- 
+
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#fff8ed,#ffecd2)", fontFamily: "'Nunito',sans-serif", paddingBottom: 60 }}>
- 
+
       {/* HEADER */}
       <div style={{ background: "linear-gradient(135deg,#F5C500,#F4631E 50%,#E8295B)", padding: "28px 20px 36px", textAlign: "center", borderBottomLeftRadius: 32, borderBottomRightRadius: 32, boxShadow: "0 8px 0 rgba(244,99,30,0.25)", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -18, left: -18, width: 90, height: 90, background: "rgba(255,255,255,0.1)", borderRadius: "50%" }} />
         <div style={{ position: "absolute", bottom: -28, right: -18, width: 110, height: 110, background: "rgba(255,255,255,0.08)", borderRadius: "50%" }} />
         <div style={{ position: "absolute", top: 12, right: 28, fontSize: 26, animation: "float 3s ease-in-out infinite" }}>🐦</div>
         <div style={{ position: "absolute", top: 18, left: 20, fontSize: 20, animation: "float 4s ease-in-out infinite 1s" }}>☀️</div>
- 
+
         {/* LOGO */}
         <div className={`logo-circle ${isAdmin ? "clickable-img" : ""}`} onClick={() => isAdmin && logoRef.current.click()} style={{ cursor: isAdmin ? "pointer" : "default" }}>
           {logo ? <img src={logo} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>🌟</span>}
           {isAdmin && <div className="img-overlay" style={{ borderRadius: "50%" }}><span style={{ fontSize: 22 }}>📷</span><span>Cambia logo</span></div>}
         </div>
         <input ref={logoRef} type="file" accept="image/*" onChange={async (e) => { const f = e.target.files[0]; if (f) { const d = await readFile(f); fbSetting("logo", d); } e.target.value = ""; }} style={{ display: "none" }} />
- 
+
         <div style={{ color: "white", fontSize: 12, fontWeight: 700, letterSpacing: 6, opacity: 0.9, marginBottom: 2 }}>CRE</div>
         <div style={{ color: "white", fontSize: 50, fontFamily: "'Fredoka One',cursive", lineHeight: 1, textShadow: "0 4px 0 rgba(0,0,0,0.13)", letterSpacing: 2 }}>GREST</div>
- 
+
         {editingYear && isAdmin ? (
           <div style={{ display: "flex", gap: 8, justifyContent: "center", alignItems: "center", marginTop: 6 }}>
             <input type="text" value={yearTmp} onChange={e => setYearTmp(e.target.value)}
@@ -299,7 +300,7 @@ export default function App() {
           </div>
         )}
         <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 3, fontStyle: "italic" }}>Guardate a lui e sarete raggianti — Sal 34</div>
- 
+
         <div style={{ marginTop: 14 }}>
           {!role ? (
             <button onClick={() => setShowLogin(true)} className="btn" style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "2px solid rgba(255,255,255,0.35)", fontSize: 13 }}>🔒 Accesso Animatori</button>
@@ -316,7 +317,7 @@ export default function App() {
           )}
         </div>
       </div>
- 
+
       {/* TABS */}
       <div style={{ display: "flex", maxWidth: 580, margin: "20px auto 0", padding: "0 16px", gap: 10 }}>
         {["classifica", "storico"].map(t => (
@@ -328,7 +329,7 @@ export default function App() {
           }}>{t === "classifica" ? "🏆 Classifica" : "📅 Storico"}</button>
         ))}
       </div>
- 
+
       {/* CONFERMA ELIMINA / RESET */}
       {confirmDelete && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
@@ -352,7 +353,7 @@ export default function App() {
           </div>
         </div>
       )}
- 
+
       {/* LOGIN */}
       {showLogin && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
@@ -372,9 +373,9 @@ export default function App() {
           </div>
         </div>
       )}
- 
+
       <div style={{ maxWidth: 580, margin: "18px auto 0", padding: "0 16px" }}>
- 
+
         {/* ===== CLASSIFICA ===== */}
         {tab === "classifica" && (
           <>
@@ -403,7 +404,7 @@ export default function App() {
                 </div>
               </div>
             )}
- 
+
             {hidePoints && !role && (
               <div className="fade-in" style={{ background: "linear-gradient(135deg,#F5C500,#F4631E)", borderRadius: 14, padding: "12px 18px", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 24 }}>🙈</span>
@@ -413,12 +414,12 @@ export default function App() {
                 </div>
               </div>
             )}
- 
+
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {sorted.map((team, index) => (
                 <div key={team.id} className={`team-card ${animId === team.id ? "card-anim" : ""}`}
                   style={{ borderColor: index < 3 ? rankBorder[index] : "#f0ece6", background: index < 3 ? rankBg[index] : "white", animationDelay: `${index * 0.06}s` }}>
- 
+
                   {editingTeam === team.id ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
                       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -463,7 +464,7 @@ export default function App() {
                         }
                         <div style={{ fontSize: 10, color: "#bbb", fontWeight: 700 }}>PUNTI</div>
                       </div>
- 
+
                       {/* Controlli punti: visibili a semi e admin */}
                       {isSemi && (
                         <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 150 }}>
@@ -508,7 +509,7 @@ export default function App() {
             </div>
           </>
         )}
- 
+
         {/* ===== STORICO ===== */}
         {tab === "storico" && (
           <>
@@ -516,7 +517,7 @@ export default function App() {
               <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 20, color: "#F4631E" }}>📅 Storico Edizioni</div>
               {isAdmin && <button onClick={() => setShowAddHistory(s => !s)} className="btn" style={{ background: "linear-gradient(135deg,#F5C500,#F4631E)", color: "white", fontSize: 13 }}>➕ Aggiungi anno</button>}
             </div>
- 
+
             {isAdmin && showAddHistory && (
               <div className="fade-in" style={{ background: "white", borderRadius: 18, padding: 18, marginBottom: 16, border: "3px solid #F5C500", boxShadow: "0 4px 0 rgba(0,0,0,0.06)" }}>
                 <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 16, color: "#F4631E", marginBottom: 12 }}>🏆 Nuova Edizione</div>
@@ -547,7 +548,7 @@ export default function App() {
                 </div>
               </div>
             )}
- 
+
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {sortedHistory.map((entry, i) => (
                 <div key={entry.id} className="history-card" style={{ animationDelay: `${i * 0.06}s`, borderLeftColor: i === 0 ? "#F5C500" : i === 1 ? "#C0C0C0" : "#F4631E" }}>
@@ -606,11 +607,10 @@ export default function App() {
           </>
         )}
       </div>
- 
+
       <div style={{ textAlign: "center", marginTop: 36, color: "#ccc", fontSize: 12, fontStyle: "italic" }}>
         ☀️ Bella Fra! · CRE Grest {grestYear}
       </div>
     </div>
   );
 }
- 
