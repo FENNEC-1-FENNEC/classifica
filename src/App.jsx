@@ -142,8 +142,7 @@ export default function App() {
   const newHistLogoRef = useRef();
   const editHistLogoRef = useRef();
   const prevHidePoints = useRef(false);
-  const [frozenOrder, setFrozenOrder] = useState([]);
- 
+  
   useEffect(() => {
     let loaded = 0;
     const done = () => { loaded++; if (loaded >= 4) setLoading(false); };
