@@ -167,6 +167,7 @@ export default function App() {
         if (data.logo !== undefined) setLogo(data.logo);
         if (data.grestYear !== undefined) setGrestYear(data.grestYear);
         if (data.hidePoints !== undefined) setHidePoints(data.hidePoints);
+        if (data.frozenOrder !== undefined) setFrozenOrder(data.frozenOrder || []);
       }
       done();
     });
@@ -190,15 +191,6 @@ export default function App() {
 
   // Quando admin nasconde i punti, salva l'ordine congelato su Firebase
   const [frozenOrder, setFrozenOrder] = useState([]);
-
-  useEffect(() => {
-    const fo = ref(db, "settings/frozenOrder");
-    const unsub = onValue(fo, (snap) => {
-      const data = snap.val();
-      if (data) setFrozenOrder(data);
-    });
-    return () => unsub();
-  }, []);
 
   const toggleHidePoints = () => {
     const newVal = !hidePoints;
@@ -454,7 +446,7 @@ export default function App() {
                   ) : (
                     <>
                       <div style={{ fontSize: index < 3 ? 26 : 17, minWidth: 32, textAlign: "center", fontFamily: "'Fredoka One',cursive", color: index < 3 ? rankBorder[index] : "#bbb" }}>
-                        {index < 3 ? medals[index] : `${index + 1}°`}
+                        {hidePoints && !role ? "❓" : (index < 3 ? medals[index] : `${index + 1}°`)}
                       </div>
                       <TeamIcon team={team} size={50} emojiSize={26} />
                       <div style={{ flex: 1, minWidth: 0 }}>
