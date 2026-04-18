@@ -108,6 +108,10 @@ export default function App() {
   const [hidePoints, setHidePoints] = useState(false);
   const [loading, setLoading] = useState(true);
   const [passwords, setPasswords] = useState({ admin: null, semi: null });
+  const [siteTitle, setSiteTitle] = useState("GREST 2026");
+  const [favicon, setFavicon] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [siteTitleTmp, setSiteTitleTmp] = useState("");
 
   // role: null | "admin" | "semi"
   const [role, setRole] = useState(null);
@@ -141,6 +145,7 @@ export default function App() {
   const editTeamImgRef = useRef();
   const newHistLogoRef = useRef();
   const editHistLogoRef = useRef();
+  const faviconRef = useRef();
   useEffect(() => {
     let loaded = 0;
     const done = () => { loaded++; if (loaded >= 4) setLoading(false); };
@@ -168,6 +173,8 @@ export default function App() {
         if (data.grestYear !== undefined) setGrestYear(data.grestYear);
         if (data.hidePoints !== undefined) setHidePoints(data.hidePoints);
         if (data.frozenOrder !== undefined) setFrozenOrder(data.frozenOrder || []);
+        if (data.siteTitle !== undefined) setSiteTitle(data.siteTitle);
+        if (data.favicon !== undefined) setFavicon(data.favicon);
       }
       done();
     });
@@ -188,6 +195,18 @@ export default function App() {
   const fbSetHistory = (entry) => set(ref(db, `history/${entry.id}`), entry);
   const fbDeleteHistory = (id) => remove(ref(db, `history/${id}`));
   const fbSetting = (key, val) => update(ref(db, "settings"), { [key]: val });
+
+  // Aggiorna titolo scheda browser
+  useEffect(() => { document.title = siteTitle; }, [siteTitle]);
+
+  // Aggiorna favicon scheda browser
+  useEffect(() => {
+    const src = favicon || logo;
+    if (!src) return;
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+    link.href = src;
+  }, [favicon, logo]);
 
   // Quando admin nasconde i punti, salva l'ordine congelato su Firebase
   const [frozenOrder, setFrozenOrder] = useState([]);
@@ -320,13 +339,13 @@ export default function App() {
 
       {/* TABS */}
       <div style={{ display: "flex", maxWidth: 580, margin: "20px auto 0", padding: "0 16px", gap: 10 }}>
-        {["classifica", "storico"].map(t => (
+        {["classifica", "storico", ...(isAdmin ? ["impostazioni"] : [])].map(t => (
           <button key={t} onClick={() => setTab(t)} className="btn" style={{
-            flex: 1, padding: 11, fontSize: 16,
+            flex: 1, padding: 11, fontSize: 15,
             background: tab === t ? "linear-gradient(135deg,#F5C500,#F4631E)" : "white",
             color: tab === t ? "white" : "#888",
             boxShadow: tab === t ? "0 4px 0 rgba(244,99,30,0.3)" : "0 3px 0 rgba(0,0,0,0.06)",
-          }}>{t === "classifica" ? "🏆 Classifica" : "📅 Storico"}</button>
+          }}>{t === "classifica" ? "🏆 Classifica" : t === "storico" ? "📅 Storico" : "⚙️ Impostazioni"}</button>
         ))}
       </div>
 
@@ -606,6 +625,47 @@ export default function App() {
             </div>
           </>
         )}
+        {/* ===== IMPOSTAZIONI (solo admin) ===== */}
+        {tab === "impostazioni" && isAdmin && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+            {/* Titolo scheda browser */}
+            <div style={{ background: "white", borderRadius: 18, padding: 20, boxShadow: "0 4px 0 rgba(0,0,0,0.06)", border: "3px solid #F5C500" }}>
+              <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 17, color: "#F4631E", marginBottom: 12 }}>📝 Titolo scheda browser</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input type="text" value={siteTitleTmp || siteTitle}
+                  onChange={e => setSiteTitleTmp(e.target.value)}
+                  placeholder="Es. GREST 2026 - Bella Fra!"
+                  style={{ flex: 1 }} />
+                <button onClick={() => { fbSetting("siteTitle", siteTitleTmp || siteTitle); setSiteTitleTmp(""); }}
+                  className="btn" style={{ background: "linear-gradient(135deg,#F5C500,#F4631E)", color: "white" }}>Salva</button>
+              </div>
+              <div style={{ fontSize: 12, color: "#aaa", marginTop: 8 }}>Attuale: <b>{siteTitle}</b></div>
+            </div>
+
+            {/* Favicon */}
+            <div style={{ background: "white", borderRadius: 18, padding: 20, boxShadow: "0 4px 0 rgba(0,0,0,0.06)", border: "3px solid #29B8D8" }}>
+              <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 17, color: "#29B8D8", marginBottom: 12 }}>🖼️ Icona scheda browser (favicon)</div>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                {(favicon || logo)
+                  ? <div style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", border: "2px solid #e5ddd0" }}>
+                      <img src={favicon || logo} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  : <div style={{ width: 56, height: 56, borderRadius: 10, background: "#f9f5ef", border: "2px solid #e5ddd0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🌟</div>
+                }
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <button onClick={() => faviconRef.current.click()} className="btn" style={{ background: "#f0ece6", color: "#555", fontSize: 13 }}>📷 Carica icona personalizzata</button>
+                  {favicon && <button onClick={() => fbSetting("favicon", null)} className="btn" style={{ background: "#fde8ec", color: "#E8295B", fontSize: 13 }}>✕ Usa logo come favicon</button>}
+                </div>
+                <input ref={faviconRef} type="file" accept="image/*" style={{ display: "none" }}
+                  onChange={async (e) => { const f = e.target.files[0]; if (f) { const d = await readFile(f); fbSetting("favicon", d); } e.target.value = ""; }} />
+              </div>
+              <div style={{ fontSize: 12, color: "#aaa", marginTop: 8 }}>Se non carichi un'icona separata, verrà usato il logo del sito.</div>
+            </div>
+
+          </div>
+        )}
+
       </div>
 
       <div style={{ textAlign: "center", marginTop: 36, color: "#ccc", fontSize: 12, fontStyle: "italic" }}>
