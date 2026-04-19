@@ -366,7 +366,7 @@ export default function App() {
       {/* HEADER */}
       <div style={{ background: "linear-gradient(135deg,#F5C500,#F4631E 50%,#E8295B)", padding: "28px 20px 36px", textAlign: "center", borderBottomLeftRadius: 32, borderBottomRightRadius: 32, boxShadow: "0 8px 0 rgba(244,99,30,0.25)", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -18, left: -18, width: 90, height: 90, background: "rgba(255,255,255,0.1)", borderRadius: "50%" }} />
-        <div style={{ position: "absolute", bottom: -28, right: -18, width: 110, height: 110, background: "rgba(255,255,255,0.08)", borderRadius: "50%" }} />
+        <div style={{ position: "absolute", bottom: -28, right: -18, width: 110, height: 110, background: "rgba(255,255,255,0.08)", borderRadius: "50%", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: 12, right: 28, fontSize: 26, animation: "float 3s ease-in-out infinite" }}>🐦</div>
         <div style={{ position: "absolute", top: 18, left: 20, fontSize: 20, animation: "float 4s ease-in-out infinite 1s" }}>☀️</div>
 
