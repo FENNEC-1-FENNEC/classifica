@@ -96,11 +96,14 @@ styleEl.textContent = `
     background: #f9f5ef; border-radius: 12px; padding: 12px;
     flex: 1; min-width: 0;
   }
-  .game-item {
-    background: white; border-radius: 8px; padding: 8px 10px;
-    margin-top: 6px; font-size: 13px; color: #333;
-    border-left: 3px solid #F5C500;
-    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  .schedule-day-cols {
+    display: flex;
+    gap: 10px;
+  }
+  @media (max-width: 480px) {
+    .schedule-day-cols {
+      flex-direction: column;
+    }
   }
     display: flex; align-items: center; justify-content: center;
     min-height: 100vh; font-family: 'Fredoka One', cursive;
@@ -734,7 +737,7 @@ export default function App() {
                         onChange={e => setNewSchedule(p => { const d = [...(p.dates || [])]; d[i] = e.target.value; return { ...p, dates: d }; })}
                         style={{ width: "100%", marginBottom: 10 }} />
 
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <div className="schedule-day-cols">
                         {/* MATTINA */}
                         <div style={{ flex: 1, background: "#FFFBEA", borderRadius: 10, padding: 10, border: "2px solid #F5C500" }}>
                           <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 13, color: "#F5C500", marginBottom: 6 }}>☀️ Mattina</div>
@@ -831,7 +834,7 @@ export default function App() {
                     <div key={di} style={{ background: "#f9f5ef", borderRadius: 12, padding: 12 }}>
                       <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 14, color: "#F4631E", marginBottom: 10 }}>📆 {day.label}</div>
 
-                      <div style={{ display: "flex", gap: 10 }}>
+                      <div className="schedule-day-cols">
                         {/* MATTINA */}
                         <div style={{ flex: 1, background: "linear-gradient(135deg,#FFF8DC,#FFFBEA)", borderRadius: 10, padding: 10, border: "2px solid #F5C500" }}>
                           <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 13, color: "#F5C500", marginBottom: 6 }}>☀️ Mattina</div>
