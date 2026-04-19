@@ -740,7 +740,7 @@ export default function App() {
                       if (!newSchedule.title.trim()) return;
                       const id = Date.now().toString();
                       const days = Array.from({ length: newSchedule.days }, (_, i) => ({
-                        label: newSchedule.dates[i] || `Giorno ${i+1}`, games: []
+                        label: newSchedule.dates[i] || `Giorno ${i+1}`, mattina: [], pomeriggio: []
                       }));
                       set(ref(db, `schedules/${id}`), { id, title: newSchedule.title, days, createdAt: Date.now() });
                       writeLog("🎮 Settimana creata", newSchedule.title);
@@ -780,54 +780,101 @@ export default function App() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {(sched.days || []).map((day, di) => (
                     <div key={di} style={{ background: "#f9f5ef", borderRadius: 12, padding: 12 }}>
-                      <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 14, color: "#F5C500", marginBottom: 6 }}>📆 {day.label}</div>
+                      <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 14, color: "#F4631E", marginBottom: 10 }}>📆 {day.label}</div>
 
-                      {/* Lista giochi */}
-                      {(day.games || []).length === 0 && !editingScheduleId && (
-                        <div style={{ fontSize: 12, color: "#ccc", fontStyle: "italic" }}>Nessun gioco programmato</div>
-                      )}
-                      {(day.games || []).map((game, gi) => (
-                        <div key={gi} className="game-item">
-                          <span>{game}</span>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        {/* MATTINA */}
+                        <div style={{ flex: 1, background: "linear-gradient(135deg,#FFF8DC,#FFFBEA)", borderRadius: 10, padding: 10, border: "2px solid #F5C500" }}>
+                          <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 13, color: "#F5C500", marginBottom: 6 }}>☀️ Mattina</div>
+                          {(day.mattina || []).length === 0 && <div style={{ fontSize: 11, color: "#ccc", fontStyle: "italic" }}>Nessun gioco</div>}
+                          {(day.mattina || []).map((game, gi) => (
+                            <div key={gi} className="game-item" style={{ borderLeftColor: "#F5C500" }}>
+                              <span style={{ fontSize: 12 }}>{game}</span>
+                              {isAdmin && editingScheduleId === sched.id && (
+                                <button onClick={() => {
+                                  const updated = JSON.parse(JSON.stringify(sched));
+                                  updated.days[di].mattina = updated.days[di].mattina.filter((_, idx) => idx !== gi);
+                                  set(ref(db, `schedules/${sched.id}`), updated);
+                                }} style={{ background: "none", border: "none", color: "#E8295B", cursor: "pointer", fontSize: 14, padding: 0, flexShrink: 0 }}>✕</button>
+                              )}
+                            </div>
+                          ))}
                           {isAdmin && editingScheduleId === sched.id && (
-                            <button onClick={() => {
-                              const updated = { ...sched };
-                              updated.days[di].games = updated.days[di].games.filter((_, idx) => idx !== gi);
-                              set(ref(db, `schedules/${sched.id}`), updated);
-                            }} style={{ background: "none", border: "none", color: "#E8295B", cursor: "pointer", fontSize: 16, padding: 0 }}>✕</button>
-                          )}
-                        </div>
-                      ))}
-
-                      {/* Aggiungi gioco (solo admin in edit mode) */}
-                      {isAdmin && editingScheduleId === sched.id && (
-                        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                          <input type="text" placeholder="Aggiungi gioco..."
-                            value={newGameInput[`${sched.id}-${di}`] || ""}
-                            onChange={e => setNewGameInput(p => ({ ...p, [`${sched.id}-${di}`]: e.target.value }))}
-                            onKeyDown={e => {
-                              if (e.key === "Enter") {
-                                const val = newGameInput[`${sched.id}-${di}`]?.trim();
+                            <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                              <input type="text" placeholder="Aggiungi..."
+                                value={newGameInput[`${sched.id}-${di}-m`] || ""}
+                                onChange={e => setNewGameInput(p => ({ ...p, [`${sched.id}-${di}-m`]: e.target.value }))}
+                                onKeyDown={e => {
+                                  if (e.key === "Enter") {
+                                    const val = newGameInput[`${sched.id}-${di}-m`]?.trim();
+                                    if (!val) return;
+                                    const updated = JSON.parse(JSON.stringify(sched));
+                                    if (!updated.days[di].mattina) updated.days[di].mattina = [];
+                                    updated.days[di].mattina.push(val);
+                                    set(ref(db, `schedules/${sched.id}`), updated);
+                                    setNewGameInput(p => ({ ...p, [`${sched.id}-${di}-m`]: "" }));
+                                  }
+                                }}
+                                style={{ flex: 1, fontSize: 12, padding: "4px 8px" }} />
+                              <button onClick={() => {
+                                const val = newGameInput[`${sched.id}-${di}-m`]?.trim();
                                 if (!val) return;
                                 const updated = JSON.parse(JSON.stringify(sched));
-                                if (!updated.days[di].games) updated.days[di].games = [];
-                                updated.days[di].games.push(val);
+                                if (!updated.days[di].mattina) updated.days[di].mattina = [];
+                                updated.days[di].mattina.push(val);
                                 set(ref(db, `schedules/${sched.id}`), updated);
-                                setNewGameInput(p => ({ ...p, [`${sched.id}-${di}`]: "" }));
-                              }
-                            }}
-                            style={{ flex: 1, fontSize: 13, padding: "5px 10px" }} />
-                          <button onClick={() => {
-                            const val = newGameInput[`${sched.id}-${di}`]?.trim();
-                            if (!val) return;
-                            const updated = JSON.parse(JSON.stringify(sched));
-                            if (!updated.days[di].games) updated.days[di].games = [];
-                            updated.days[di].games.push(val);
-                            set(ref(db, `schedules/${sched.id}`), updated);
-                            setNewGameInput(p => ({ ...p, [`${sched.id}-${di}`]: "" }));
-                          }} className="btn" style={{ background: "#2ecc71", color: "white", fontSize: 13, padding: "5px 10px" }}>＋</button>
+                                setNewGameInput(p => ({ ...p, [`${sched.id}-${di}-m`]: "" }));
+                              }} className="btn" style={{ background: "#F5C500", color: "#333", fontSize: 14, padding: "4px 8px" }}>＋</button>
+                            </div>
+                          )}
                         </div>
-                      )}
+
+                        {/* POMERIGGIO */}
+                        <div style={{ flex: 1, background: "linear-gradient(135deg,#EBF8FF,#E8F4FD)", borderRadius: 10, padding: 10, border: "2px solid #29B8D8" }}>
+                          <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 13, color: "#29B8D8", marginBottom: 6 }}>🌙 Pomeriggio</div>
+                          {(day.pomeriggio || []).length === 0 && <div style={{ fontSize: 11, color: "#ccc", fontStyle: "italic" }}>Nessun gioco</div>}
+                          {(day.pomeriggio || []).map((game, gi) => (
+                            <div key={gi} className="game-item" style={{ borderLeftColor: "#29B8D8" }}>
+                              <span style={{ fontSize: 12 }}>{game}</span>
+                              {isAdmin && editingScheduleId === sched.id && (
+                                <button onClick={() => {
+                                  const updated = JSON.parse(JSON.stringify(sched));
+                                  updated.days[di].pomeriggio = updated.days[di].pomeriggio.filter((_, idx) => idx !== gi);
+                                  set(ref(db, `schedules/${sched.id}`), updated);
+                                }} style={{ background: "none", border: "none", color: "#E8295B", cursor: "pointer", fontSize: 14, padding: 0, flexShrink: 0 }}>✕</button>
+                              )}
+                            </div>
+                          ))}
+                          {isAdmin && editingScheduleId === sched.id && (
+                            <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                              <input type="text" placeholder="Aggiungi..."
+                                value={newGameInput[`${sched.id}-${di}-p`] || ""}
+                                onChange={e => setNewGameInput(p => ({ ...p, [`${sched.id}-${di}-p`]: e.target.value }))}
+                                onKeyDown={e => {
+                                  if (e.key === "Enter") {
+                                    const val = newGameInput[`${sched.id}-${di}-p`]?.trim();
+                                    if (!val) return;
+                                    const updated = JSON.parse(JSON.stringify(sched));
+                                    if (!updated.days[di].pomeriggio) updated.days[di].pomeriggio = [];
+                                    updated.days[di].pomeriggio.push(val);
+                                    set(ref(db, `schedules/${sched.id}`), updated);
+                                    setNewGameInput(p => ({ ...p, [`${sched.id}-${di}-p`]: "" }));
+                                  }
+                                }}
+                                style={{ flex: 1, fontSize: 12, padding: "4px 8px" }} />
+                              <button onClick={() => {
+                                const val = newGameInput[`${sched.id}-${di}-p`]?.trim();
+                                if (!val) return;
+                                const updated = JSON.parse(JSON.stringify(sched));
+                                if (!updated.days[di].pomeriggio) updated.days[di].pomeriggio = [];
+                                updated.days[di].pomeriggio.push(val);
+                                set(ref(db, `schedules/${sched.id}`), updated);
+                                setNewGameInput(p => ({ ...p, [`${sched.id}-${di}-p`]: "" }));
+                              }} className="btn" style={{ background: "#29B8D8", color: "white", fontSize: 14, padding: "4px 8px" }}>＋</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
