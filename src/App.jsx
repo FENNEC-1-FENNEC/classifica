@@ -176,6 +176,7 @@ export default function App() {
   const [newSchedule, setNewSchedule] = useState({ title: "", days: 7, dates: [] });
   const [editingScheduleId, setEditingScheduleId] = useState(null);
   const [newGameInput, setNewGameInput] = useState({});
+  const [pwEdit, setPwEdit] = useState({ super: "", admin: "", semi: "" });
   const [pwSaved, setPwSaved] = useState(false);
 
   const logoRef = useRef();
