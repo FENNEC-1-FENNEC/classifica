@@ -715,39 +715,87 @@ export default function App() {
             {isAdmin && showAddSchedule && (
               <div className="fade-in" style={{ background: "white", borderRadius: 18, padding: 18, border: "3px solid #F5C500", boxShadow: "0 4px 0 rgba(0,0,0,0.06)" }}>
                 <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 16, color: "#F4631E", marginBottom: 12 }}>📅 Nuova Settimana</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <input type="text" placeholder="Titolo (es. 10-17 Giugno)" value={newSchedule.title}
                     onChange={e => setNewSchedule(p => ({ ...p, title: e.target.value }))} style={{ width: "100%" }} />
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 14, color: "#666", fontWeight: 600 }}>Numero di giorni:</span>
                     {[3,4,5,6,7].map(n => (
                       <button key={n} onClick={() => setNewSchedule(p => ({ ...p, days: n }))} className="btn"
                         style={{ padding: "5px 12px", background: newSchedule.days === n ? "#F4631E" : "#f0ece6", color: newSchedule.days === n ? "white" : "#666", fontSize: 14 }}>{n}</button>
                     ))}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {Array.from({ length: newSchedule.days }, (_, i) => (
-                      <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontFamily: "'Fredoka One',cursive", color: "#F5C500", minWidth: 60, fontSize: 13 }}>Giorno {i+1}</span>
-                        <input type="text" placeholder={`Es. Lunedì 10 Giugno`}
-                          value={newSchedule.dates[i] || ""}
-                          onChange={e => setNewSchedule(p => { const d = [...(p.dates || [])]; d[i] = e.target.value; return { ...p, dates: d }; })}
-                          style={{ flex: 1 }} />
+
+                  {/* Per ogni giorno: nome + mattina + pomeriggio */}
+                  {Array.from({ length: newSchedule.days }, (_, i) => (
+                    <div key={i} style={{ background: "#f9f5ef", borderRadius: 12, padding: 12 }}>
+                      <input type="text" placeholder={`Nome giorno ${i+1} (es. Lunedì 10 Giugno)`}
+                        value={newSchedule.dates[i] || ""}
+                        onChange={e => setNewSchedule(p => { const d = [...(p.dates || [])]; d[i] = e.target.value; return { ...p, dates: d }; })}
+                        style={{ width: "100%", marginBottom: 10 }} />
+
+                      <div style={{ display: "flex", gap: 8 }}>
+                        {/* MATTINA */}
+                        <div style={{ flex: 1, background: "#FFFBEA", borderRadius: 10, padding: 10, border: "2px solid #F5C500" }}>
+                          <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 13, color: "#F5C500", marginBottom: 6 }}>☀️ Mattina</div>
+                          {(newSchedule.mattina?.[i] || []).map((g, gi) => (
+                            <div key={gi} style={{ display: "flex", justifyContent: "space-between", background: "white", borderRadius: 6, padding: "4px 8px", marginBottom: 4, fontSize: 12, borderLeft: "3px solid #F5C500" }}>
+                              <span>{g}</span>
+                              <button onClick={() => setNewSchedule(p => { const m = [...(p.mattina || [])]; m[i] = (m[i] || []).filter((_, idx) => idx !== gi); return { ...p, mattina: m }; })}
+                                style={{ background: "none", border: "none", color: "#E8295B", cursor: "pointer", fontSize: 13 }}>✕</button>
+                            </div>
+                          ))}
+                          <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                            <input type="text" placeholder="Aggiungi gioco..."
+                              value={newGameInput[`new-${i}-m`] || ""}
+                              onChange={e => setNewGameInput(p => ({ ...p, [`new-${i}-m`]: e.target.value }))}
+                              onKeyDown={e => { if (e.key === "Enter") { const v = newGameInput[`new-${i}-m`]?.trim(); if (!v) return; setNewSchedule(p => { const m = [...(p.mattina || [])]; m[i] = [...(m[i] || []), v]; return { ...p, mattina: m }; }); setNewGameInput(p => ({ ...p, [`new-${i}-m`]: "" })); }}}
+                              style={{ flex: 1, fontSize: 12, padding: "4px 8px" }} />
+                            <button onClick={() => { const v = newGameInput[`new-${i}-m`]?.trim(); if (!v) return; setNewSchedule(p => { const m = [...(p.mattina || [])]; m[i] = [...(m[i] || []), v]; return { ...p, mattina: m }; }); setNewGameInput(p => ({ ...p, [`new-${i}-m`]: "" })); }}
+                              className="btn" style={{ background: "#F5C500", color: "#333", fontSize: 14, padding: "4px 8px" }}>＋</button>
+                          </div>
+                        </div>
+
+                        {/* POMERIGGIO */}
+                        <div style={{ flex: 1, background: "#EBF8FF", borderRadius: 10, padding: 10, border: "2px solid #29B8D8" }}>
+                          <div style={{ fontFamily: "'Fredoka One',cursive", fontSize: 13, color: "#29B8D8", marginBottom: 6 }}>🌙 Pomeriggio</div>
+                          {(newSchedule.pomeriggio?.[i] || []).map((g, gi) => (
+                            <div key={gi} style={{ display: "flex", justifyContent: "space-between", background: "white", borderRadius: 6, padding: "4px 8px", marginBottom: 4, fontSize: 12, borderLeft: "3px solid #29B8D8" }}>
+                              <span>{g}</span>
+                              <button onClick={() => setNewSchedule(p => { const po = [...(p.pomeriggio || [])]; po[i] = (po[i] || []).filter((_, idx) => idx !== gi); return { ...p, pomeriggio: po }; })}
+                                style={{ background: "none", border: "none", color: "#E8295B", cursor: "pointer", fontSize: 13 }}>✕</button>
+                            </div>
+                          ))}
+                          <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                            <input type="text" placeholder="Aggiungi gioco..."
+                              value={newGameInput[`new-${i}-p`] || ""}
+                              onChange={e => setNewGameInput(p => ({ ...p, [`new-${i}-p`]: e.target.value }))}
+                              onKeyDown={e => { if (e.key === "Enter") { const v = newGameInput[`new-${i}-p`]?.trim(); if (!v) return; setNewSchedule(p => { const po = [...(p.pomeriggio || [])]; po[i] = [...(po[i] || []), v]; return { ...p, pomeriggio: po }; }); setNewGameInput(p => ({ ...p, [`new-${i}-p`]: "" })); }}}
+                              style={{ flex: 1, fontSize: 12, padding: "4px 8px" }} />
+                            <button onClick={() => { const v = newGameInput[`new-${i}-p`]?.trim(); if (!v) return; setNewSchedule(p => { const po = [...(p.pomeriggio || [])]; po[i] = [...(po[i] || []), v]; return { ...p, pomeriggio: po }; }); setNewGameInput(p => ({ ...p, [`new-${i}-p`]: "" })); }}
+                              className="btn" style={{ background: "#29B8D8", color: "white", fontSize: 14, padding: "4px 8px" }}>＋</button>
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
+
                   <div style={{ display: "flex", gap: 9 }}>
                     <button onClick={() => {
                       if (!newSchedule.title.trim()) return;
                       const id = Date.now().toString();
                       const days = Array.from({ length: newSchedule.days }, (_, i) => ({
-                        label: newSchedule.dates[i] || `Giorno ${i+1}`, mattina: [], pomeriggio: []
+                        label: newSchedule.dates[i] || `Giorno ${i+1}`,
+                        mattina: newSchedule.mattina?.[i] || [],
+                        pomeriggio: newSchedule.pomeriggio?.[i] || []
                       }));
                       set(ref(db, `schedules/${id}`), { id, title: newSchedule.title, days, createdAt: Date.now() });
                       writeLog("🎮 Settimana creata", newSchedule.title);
-                      setNewSchedule({ title: "", days: 7, dates: [] }); setShowAddSchedule(false);
+                      setNewSchedule({ title: "", days: 7, dates: [] });
+                      setNewGameInput({});
+                      setShowAddSchedule(false);
                     }} className="btn" style={{ flex: 1, padding: 11, background: "linear-gradient(135deg,#F5C500,#F4631E)", color: "white", fontSize: 15 }}>Crea</button>
-                    <button onClick={() => setShowAddSchedule(false)} className="btn" style={{ flex: 1, padding: 11, background: "#f0ece6", color: "#666", fontSize: 15 }}>Annulla</button>
+                    <button onClick={() => { setShowAddSchedule(false); setNewSchedule({ title: "", days: 7, dates: [] }); setNewGameInput({}); }} className="btn" style={{ flex: 1, padding: 11, background: "#f0ece6", color: "#666", fontSize: 15 }}>Annulla</button>
                   </div>
                 </div>
               </div>
